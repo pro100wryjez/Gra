@@ -1,0 +1,106 @@
+1. Krótka fabuła (opis świata gry)
+
+W świecie ogarniętym wojną dwie potężne armie stają naprzeciw siebie: armia światła, dowodzona przez gracza, oraz armia piekieł, sterowana przez sztuczną inteligencję. Każda armia składa się z elitarnych jednostek o unikalnych statystykach – od prostych szeregowych po istoty niemal boskie, takie jak Archanioł czy Arcydiabeł.
+
+Bitwa rozgrywa się w systemie turowym, gdzie o zwycięstwie decydują nie tylko siła i liczebność, lecz także inicjatywa, morale oraz los (szczęście). Gracz podejmuje strategiczne decyzje: atakować, bronić się, czekać na lepszy moment lub uciec z pola bitwy. Każda decyzja ma konsekwencje, a los pojedynku zmienia się dynamicznie aż do całkowitego zniszczenia jednej z armii lub ucieczki gracza.
+
+2. Z czego składa się projekt (struktura programu)
+
+Projekt jest symulatorem bitwy turowej napisanym w języku C, wykorzystującym struktury dynamiczne, operacje na plikach oraz losowość.
+
+Główne elementy:
+2.1 Struktury danych
+
+Unit – pojedyncza jednostka bojowa
+Zawiera m.in.:
+
+statystyki (atak, obrona, obrażenia, HP, inicjatywa),
+
+stan jednostki (żywa/martwa, gotowość bojowa),
+
+mechaniki specjalne (kontratak, obrona).
+
+UnitNode (lista jednokierunkowa)
+Pozwala dynamicznie przechowywać dowolną liczbę jednostek w armii.
+
+Army
+Reprezentuje armię jako całość:
+
+listę jednostek,
+
+morale i szczęście,
+
+licznik jednostek.
+
+Uwaga ekspercka: użycie listy dynamicznej zamiast tablicy jest świadomym wyborem projektowym – umożliwia elastyczne zarządzanie armią bez limitów rozmiaru.
+
+2.2 Pliki i wejście/wyjście
+
+units.txt – definicja jednostek (łatwa rozbudowa projektu),
+
+battle_log.txt – pełny zapis przebiegu bitwy,
+
+summary.txt – końcowe podsumowanie stanu armii.
+
+Program sam generuje plik units.txt, jeśli ten nie istnieje – to cecha rzadko spotykana w prostych projektach studenckich.
+
+3. Co robi program (działanie krok po kroku)
+3.1 Inicjalizacja
+
+Losowanie morale i szczęścia dla obu armii.
+
+Wczytanie jednostek z pliku.
+
+Losowe ustalenie liczebności oddziałów (stacków) zależnie od rangi jednostki.
+
+3.2 System walki
+
+Walka odbywa się turowo, ale z mechaniką gotowości bojowej:
+
+inicjatywa wpływa na częstotliwość ruchów,
+
+jednostki mogą wykonać więcej niż jeden ruch.
+
+3.3 Dostępne akcje gracza
+
+Atak (z kontratakiem przeciwnika),
+
+Obrona (jednorazowy bonus),
+
+Czekanie (taktyczne opóźnienie),
+
+Ucieczka (natychmiastowa porażka).
+
+3.4 Mechaniki losowe
+
+Morale:
+
+pozytywne → dodatkowa tura,
+
+negatywne → utrata tury.
+
+Szczęście:
+
+zwiększenie lub zmniejszenie obrażeń o 50%.
+
+3.5 Zakończenie
+
+Zwycięstwo jednej ze stron lub ucieczka gracza.
+
+Wyświetlenie i zapis podsumowania.
+
+4. Co ten projekt faktycznie pokazuje (ważne dla profesora)
+
+Ten kod nie jest tylko grą. Projekt demonstruje:
+
+poprawne użycie struktur i dynamicznej alokacji pamięci,
+
+zarządzanie cyklem życia danych (malloc/free),
+
+pracę na plikach tekstowych,
+
+modularny podział logiki (AI, gracz, walka),
+
+symulację systemu decyzyjnego z losowością,
+
+podstawy projektowania silnika turowego.
