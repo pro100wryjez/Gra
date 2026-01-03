@@ -59,3 +59,37 @@ typedef struct {
 static int rand_range(int min, int max) {
     return min + rand() % (max - min + 1);
 }
+static int generate_stack(int min_val, int max_val, int rank, int total_ranks) {
+    int range = max_val - min_val + 1;
+    int upper = max_val - (rank - 1) * range / total_ranks;
+    int lower = min_val + (total_ranks - rank) * range / total_ranks;
+    if (lower > upper) lower = upper;
+    return rand_range(lower, upper);
+}
+
+static void army_init(Army* a, int morale, int luck) {
+    a->head = NULL;
+    a->count = 0;
+    a->morale = morale;
+    a->luck = luck;
+}
+
+static void army_push_back(Army* a, const Unit* u) {
+    UnitNode* n = (UnitNode*)malloc(sizeof(UnitNode));
+    if (!n) {
+        LOGF("Błąd: brak pamięci (malloc).\n");
+        exit(1);
+    }
+    n->u = *u;
+    n->next = NULL;
+
+    if (!a->head) {
+        a->head = n;
+    }
+    else {
+        UnitNode* cur = a->head;
+        while (cur->next) cur = cur->next;
+        cur->next = n;
+    }
+    a->count++;
+}
