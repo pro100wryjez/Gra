@@ -1,32 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
+#include <stdbool.h> // true/false
 #include <string.h>
 #include <time.h>
-#include <stdarg.h>
+#include <stdarg.h> // obsługa zmiennej liczby argumentów
 
+// komendy do animacji ataku
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <unistd.h>
 #endif
 
-#define MAX_NAME   40
+#define MAX_NAME   40 
 #define MAX_READY  10
 
-#define UNITS_FILE "units.txt"
-#define LOG_FILE   "battle_log.txt"
-#define SUMMARY_FILE "summary.txt"
+#define UNITS_FILE "units.txt" // plik z jednostkami
+#define LOG_FILE   "battle_log.txt" // logi
+#define SUMMARY_FILE "summary.txt" // podsumowanie bitwy
 
-static FILE* g_log = NULL;
-
-#define LOGF(...) do { \
+static FILE* g_log = NULL; //log do komendy poniżej
+//komenda, która pozwala zapisywać tekst na żywo, a także do pliku
+#define LOGF(...) do {\
     printf(__VA_ARGS__); \
     if (g_log) fprintf(g_log, __VA_ARGS__); \
 } while(0)
 
-typedef struct {
-    char name[MAX_NAME];
+
+typedef struct { // opis jednostki
+    char name[MAX_NAME]; 
     int attack;
     int defense;
     int min_damage;
@@ -34,33 +36,31 @@ typedef struct {
     int hp;
     int initiative;
     int power;
-    int stack;
-    int current_hp;
-    double readiness;
-    bool alive;
+    int stack; //AI używa do priorytetu celu
+    int current_hp; // hp ostatniej zyjacej istoty
+    double readiness; // gotowosc bojowa
+    bool alive; 
     bool countered;
     bool defended;
 } Unit;
 
-/* ====== LISTA DYNAMICZNA ====== */
-typedef struct UnitNode {
+typedef struct UnitNode { // lista z jednostkami
     Unit u;
     struct UnitNode* next;
 } UnitNode;
 
-typedef struct {
+typedef struct { //lista, ilosc, morale, luck
     UnitNode* head;
     int count;
     int morale;
     int luck;
 } Army;
 
-/* --- Funkcje pomocnicze --- */
 static int rand_range(int min, int max) {
     return min + rand() % (max - min + 1);
 }
 
-static int generate_stack(int min_val, int max_val, int rank, int total_ranks) {
+static int generate_stack(int min_val, int max_val, int rank, int total_ranks) { // generator jednostek, dzięki niemu w słabszych jednostek jest więcej, silniejszych mniej.
     int range = max_val - min_val + 1;
     int upper = max_val - (rank - 1) * range / total_ranks;
     int lower = min_val + (total_ranks - rank) * range / total_ranks;
@@ -68,14 +68,15 @@ static int generate_stack(int min_val, int max_val, int rank, int total_ranks) {
     return rand_range(lower, upper);
 }
 
-static void army_init(Army* a, int morale, int luck) {
+static void army_init(Army* a, int morale, int luck) { // ustawia armię w stanie początkowym (pusta lista, morale, szczęście)
+
     a->head = NULL;
     a->count = 0;
     a->morale = morale;
     a->luck = luck;
 }
 
-static void army_push_back(Army* a, const Unit* u) {
+static void army_push_back(Army* a, const Unit* u) { // dodaje nową jednostkę do armii
     UnitNode* n = (UnitNode*)malloc(sizeof(UnitNode));
     if (!n) {
         LOGF("Błąd: brak pamięci (malloc).\n");
@@ -95,7 +96,7 @@ static void army_push_back(Army* a, const Unit* u) {
     a->count++;
 }
 
-static void army_free(Army* a) {
+static void army_free(Army* a) { // zwalnia pamięć zajętą przez jednostki armii
     UnitNode* cur = a->head;
     while (cur) {
         UnitNode* next = cur->next;
@@ -106,14 +107,13 @@ static void army_free(Army* a) {
     a->count = 0;
 }
 
-static bool all_dead(const Army* army) {
+static bool all_dead(const Army* army) { // sprawdza, czy wszystkie jednostki w armii są martwe
     for (UnitNode* n = army->head; n; n = n->next)
         if (n->u.alive) return false;
     return true;
 }
 
-/* wybór celu AI: najsilniejszy żywy (power*stack) */
-static Unit* choose_enemy_target(Army* enemy) {
+static Unit* choose_enemy_target(Army* enemy) { // AI wybiera cel o największym power * stack
     int max_power = -1;
     Unit* target = NULL;
     for (UnitNode* n = enemy->head; n; n = n->next) {
@@ -128,8 +128,7 @@ static Unit* choose_enemy_target(Army* enemy) {
     return target;
 }
 
-/* wybór celu gracza: numerowanie żywych w danej chwili */
-static Unit* choose_alive_target_ptr(Army* enemy) {
+static Unit* choose_alive_target_ptr(Army* enemy) { // wybór atakowanej jednostki przez gracza
     while (1) {
         int k = 0;
         LOGF("Wybierz cel:\n");
@@ -167,8 +166,8 @@ static Unit* choose_alive_target_ptr(Army* enemy) {
     }
 }
 
-/* --- Wyświetlanie --- */
-static void show_unit(Unit u) {
+static void show_unit(Unit u) { // wyświetlanie statystyk jednostki
+
     if (u.alive)
         LOGF("%s | Atak: %d | Obrona: %d | Obrażenia: %d-%d | HP: %d | Inicjatywa: %d | Stack: %d\n",
             u.name, u.attack, u.defense, u.min_damage, u.max_damage, u.hp, u.initiative, u.stack);
@@ -192,8 +191,7 @@ static void show_summary(const Army* army, const char* title) {
     }
 }
 
-/* --- Animacja ataku --- */
-static void attack_animation(const char* attacker_name, const char* defender_name, bool counter) {
+static void attack_animation(const char* attacker_name, const char* defender_name, bool counter) { // animacja ataku
     if (counter) LOGF("Kontratak");
     else LOGF("Atak");
     fflush(stdout);
@@ -217,7 +215,7 @@ static void attack_animation(const char* attacker_name, const char* defender_nam
         LOGF("%s atakuje %s\n", attacker_name, defender_name);
 
     for (int i = 0; i < 5; i++) {
-        LOGF("   ATK");
+        LOGF("   ATAK!");
         fflush(stdout);
         if (g_log) fflush(g_log);
 #ifdef _WIN32
@@ -229,8 +227,8 @@ static void attack_animation(const char* attacker_name, const char* defender_nam
     LOGF("\n");
 }
 
-/* --- Atak z kontratakiem i szczęściem --- */
-static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luck, int defender_luck) {
+static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luck, int defender_luck) { // atak jednostki z uwzględnieniem obrony, 														// szczęścia i jednorazowego kontrataku
+
     if (!attacker || !defender) return;
     if (!attacker->alive || !defender->alive) return;
 
@@ -239,11 +237,11 @@ static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luc
     int single_unit_damage = rand_range(attacker->min_damage, attacker->max_damage);
     double base_damage = (double)single_unit_damage * attacker->stack;
 
-    double defense_modifier = 0.07 * defender->defense;
-    if (defense_modifier > 0.55) defense_modifier = 0.55;
+    double defense_modifier = 0.06 * defender->defense;
+    if (defense_modifier > 0.7) defense_modifier = 0.7;
 
     double damage = base_damage * (1.0 - defense_modifier);
-    if (damage < base_damage * 0.3) damage = base_damage * 0.3;
+    if (damage < base_damage * 0.65) damage = base_damage * 0.65;
     if (damage < 1) damage = 1;
 
     if (attacker_luck != 0) {
@@ -276,8 +274,7 @@ static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luc
 
     LOGF("Zabija %d jednostek, Pozostało: %d, HP: %d\n\n", kills, defender->stack, defender->current_hp);
 
-    /* Kontratak (tylko jeśli nie kontrakował wcześniej) */
-    if (defender->alive && defender->countered == false) {
+    if (defender->alive && defender->countered == false) { //kontraatak
         defender->countered = true;
         attack_animation(defender->name, attacker->name, true);
 
@@ -321,7 +318,6 @@ static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luc
     }
 }
 
-/* --- Pokazywanie akcji --- */
 static void show_actions(Unit* u) {
     LOGF("\nAkcje dla jednostki %s (Stack: %d, HP: %d):\n", u->name, u->stack, u->current_hp);
     LOGF("1: Atak\n");
@@ -330,8 +326,7 @@ static void show_actions(Unit* u) {
     LOGF("4: Ucieczka (natychmiastowa przegrana)\n");
 }
 
-/* --- Tury gracza --- */
-static void player_turn(Unit* u, Army* enemy, int morale, int luck, bool* escape_flag) {
+static void player_turn(Unit* u, Army* enemy, int morale, int luck, bool* escape_flag) { //tura gracza
     if (!u->alive || u->readiness < MAX_READY) return;
 
     int morale_roll = rand_range(1, 10);
@@ -408,8 +403,7 @@ static void player_turn(Unit* u, Army* enemy, int morale, int luck, bool* escape
     }
 }
 
-/* --- Tury wroga --- */
-static void enemy_turn(Unit* u, Army* player, int morale, int luck) {
+static void enemy_turn(Unit* u, Army* player, int morale, int luck) { // tura ai
     if (!u->alive || u->readiness < MAX_READY) return;
 
     int morale_roll = rand_range(1, 10);
@@ -454,8 +448,7 @@ static void enemy_turn(Unit* u, Army* player, int morale, int luck) {
     }
 }
 
-/* --- Walka --- */
-static void battle(Army* player, Army* enemy) {
+static void battle(Army* player, Army* enemy) { // walka
     bool first_turn = true;
     bool escape = false;
 
@@ -498,28 +491,27 @@ static void battle(Army* player, Army* enemy) {
     if (escape) exit(0);
 }
 
-/* ====== PLIKI: tworzenie domyślnego units.txt (jeśli brak) ====== */
-static void write_default_units_file(void) {
+static void write_default_units_file(void) { // tworzenie units.txt
     FILE* f = fopen(UNITS_FILE, "w");
     if (!f) return;
 
-    /* Format: SIDE;NAME;ATK;DEF;MIN;MAX;HP;INIT;POWER */
+    // Format: SIDE;NAME;ATK;DEF;MIN;MAX;HP;INIT;POWER
     fprintf(f, "# SIDE;NAME;ATK;DEF;MIN;MAX;HP;INIT;POWER\n");
-    fprintf(f, "P;Szeregowy;1;2;1;2;6;8;72\n");
-    fprintf(f, "P;Strzelec wyborowy;4;4;2;8;10;8;199\n");
-    fprintf(f, "P;Krzyżowiec;5;9;2;5;26;8;201\n");
-    fprintf(f, "P;Gryf królewski;9;8;5;15;35;15;716\n");
-    fprintf(f, "P;Inkwizytor;16;16;9;12;80;10;1086\n");
-    fprintf(f, "P;Paladyn;24;24;20;30;100;12;2185\n");
-    fprintf(f, "P;Archanioł;31;31;50;50;220;11;6153\n");
+    fprintf(f, "P;Rekrut;2;1;1;3;5;8;72\n");
+    fprintf(f, "P;Łucznik precyzyjny;1;4;2;10;11;8;199\n");
+    fprintf(f, "P;Rycerz Kruczy;4;11;2;6;30;8;201\n");
+    fprintf(f, "P;Sokół Szlachetny;13;7;5;17;40;15;716\n");
+    fprintf(f, "P;Strażnik Światła;18;18;11;12;83;10;1086\n");
+    fprintf(f, "P;Wojownik Zakonu;27;20;15;35;105;12;2185\n");
+    fprintf(f, "P;Nieśmiertelny Anioł;40;25;34;67;220;11;6153\n");
 
-    fprintf(f, "E;Chowaniec;3;3;1;4;6;13;127\n");
-    fprintf(f, "E;Rogaty nadzorca;3;4;1;4;13;8;150\n");
-    fprintf(f, "E;Cerber;4;3;3;5;15;13;338\n");
-    fprintf(f, "E;Władczyni Sukkubusów;6;6;6;13;30;10;694\n");
-    fprintf(f, "E;Zmora;18;18;8;16;66;16;1415\n");
-    fprintf(f, "E;Czarci Lord;23;21;13;31;120;8;2360\n");
-    fprintf(f, "E;Arcydiabeł;32;29;36;66;199;11;5850\n");
+    fprintf(f, "E;Istota Z Otchłani;4;1;2;5;6;15;127\n");
+    fprintf(f, "E;Bestia Płomieni;5;2;1;6;16;8;150\n");
+    fprintf(f, "E;Zły Poplecznik;7;2;4;5;18;13;338\n");
+    fprintf(f, "E;Mroczna Królowa;6;6;6;16;30;10;694\n");
+    fprintf(f, "E;Czarny Koń;16;23;10;12;80;16;1415\n");
+    fprintf(f, "E;Władca Spopielenia;25;20;11;35;125;8;2360\n");
+    fprintf(f, "E;Herold Zagłady;35;30;30;59;205;11;5850\n");
 
     fclose(f);
 }
@@ -622,12 +614,11 @@ static void save_summary_to_file(const Army* player, const Army* enemy) {
 int main(void) {
     srand((unsigned)time(NULL));
 
-    g_log = fopen(LOG_FILE, "w"); /* plik logu (tekstowy) */
+    g_log = fopen(LOG_FILE, "w"); 
     if (!g_log) {
         printf("Uwaga: nie mogę utworzyć %s (log będzie tylko na ekranie).\n", LOG_FILE);
     }
 
-    /* Armie na stercie (dynamicznie) */
     Army* player = (Army*)malloc(sizeof(Army));
     Army* enemy = (Army*)malloc(sizeof(Army));
     if (!player || !enemy) {
