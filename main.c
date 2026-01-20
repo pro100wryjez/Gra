@@ -250,11 +250,11 @@ static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luc
         int roll = rand_range(1, 10);
         if (attacker_luck > 0 && roll <= attacker_luck * 2) {
             damage *= 1.5;
-            LOGF("%s korzysta z POZYTYWNEGO szczęścia! (+50% obrażeń)\n", attacker->name);
+            LOGF("%s korzysta z POZYTYWNEGO szczęścia! (+50%% obrażeń)\n", attacker->name);
         }
         else if (attacker_luck < 0 && roll <= -attacker_luck * 2) {
             damage *= 0.5;
-            LOGF("%s doświadcza NEGATYWNEGO szczęścia! (-50% obrażeń)\n", attacker->name);
+            LOGF("%s doświadcza NEGATYWNEGO szczęścia! (-50%% obrażeń)\n", attacker->name);
         }
     }
 
