@@ -19,8 +19,8 @@
 #define LOG_FILE   "battle_log.txt" // logi
 #define SUMMARY_FILE "summary.txt" // podsumowanie bitwy
 
-static FILE* g_log = NULL; //log do komendy poniżej
-//komenda, która pozwala zapisywać tekst na żywo, a także do pliku
+static FILE* g_log = NULL; // log do komendy poniżej
+// komenda, która pozwala zapisywać tekst na żywo, a także do pliku
 #define LOGF(...) do {\
     printf(__VA_ARGS__); \
     if (g_log) fprintf(g_log, __VA_ARGS__); \
@@ -36,7 +36,7 @@ typedef struct { // opis jednostki
     int hp;
     int initiative;
     int power;
-    int stack; //AI używa do priorytetu celu
+    int stack; // AI używa do priorytetu celu
     int current_hp; // hp ostatniej zyjacej istoty
     double readiness; // gotowosc bojowa
     bool alive; 
@@ -49,7 +49,7 @@ typedef struct UnitNode { // lista z jednostkami
     struct UnitNode* next;
 } UnitNode;
 
-typedef struct { //lista, ilosc, morale, luck
+typedef struct { // lista, ilosc, morale, luck
     UnitNode* head;
     int count;
     int morale;
@@ -154,7 +154,7 @@ static Unit* choose_alive_target_ptr(Army* enemy) { // wybór atakowanej jednost
             continue;
         }
 
-        /* przejście drugi raz po liście i znalezienie wybranego żywego */
+        // przejście drugi raz po liście i znalezienie wybranego żywego 
         int idx = 0;
         for (UnitNode* n = enemy->head; n; n = n->next) {
             if (n->u.alive) {
@@ -227,7 +227,7 @@ static void attack_animation(const char* attacker_name, const char* defender_nam
     LOGF("\n");
 }
 
-static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luck, int defender_luck) { // atak jednostki z uwzględnieniem obrony, 														// szczęścia i jednorazowego kontrataku
+static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luck, int defender_luck) { // atak jednostki z uwzględnieniem obrony, szczęścia i jednorazowego kontrataku
 
     if (!attacker || !defender) return;
     if (!attacker->alive || !defender->alive) return;
@@ -274,7 +274,7 @@ static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luc
 
     LOGF("Zabija %d jednostek, Pozostało: %d, HP: %d\n\n", kills, defender->stack, defender->current_hp);
 
-    if (defender->alive && defender->countered == false) { //kontraatak
+    if (defender->alive && defender->countered == false) { // kontraatak
         defender->countered = true;
         attack_animation(defender->name, attacker->name, true);
 
@@ -285,7 +285,7 @@ static void attack_with_counter(Unit* attacker, Unit* defender, int attacker_luc
         if (defense_modifier > 0.55) defense_modifier = 0.55;
 
         damage = base_damage * (1.0 - defense_modifier);
-        if (damage < base_damage * 0.3) damage = base_damage * 0.3;
+        if (damage < base_damage * 0.4) damage = base_damage * 0.4;
         if (damage < 1) damage = 1;
 
         if (defender_luck != 0) {
@@ -326,7 +326,7 @@ static void show_actions(Unit* u) {
     LOGF("4: Ucieczka (natychmiastowa przegrana)\n");
 }
 
-static void player_turn(Unit* u, Army* enemy, int morale, int luck, bool* escape_flag) { //tura gracza
+static void player_turn(Unit* u, Army* enemy, int morale, int luck, bool* escape_flag) { // tura gracza
     if (!u->alive || u->readiness < MAX_READY) return;
 
     int morale_roll = rand_range(1, 10);
@@ -528,13 +528,12 @@ static bool load_armies_from_file(Army* player, Army* enemy) {
         }
     }
 
-    char line[512];
+    char line[512]; // wczytywanie jednostek z units.txt
     int rankP = 0, rankE = 0;
 
     while (fgets(line, sizeof(line), f)) {
         if (line[0] == '#' || line[0] == '\n') continue;
 
-        /* usuń \n */
         line[strcspn(line, "\r\n")] = 0;
 
         char* tok = strtok(line, ";");
